@@ -11,6 +11,52 @@ typedef unsigned long long ull; // uint 32
 //#define HARDWARE_TYPE MD_MAX72XX::GENERIC_HW
 #define MAX_DEVICES 4
 
+// BUTTONS__________________________
+// define buttons for control
+#define UP_BUTTON 2
+#define DOWN_BUTTON 3
+#define LEFT_BUTTON 4
+#define RIGHT_BUTTON 5
+#define MOVE_BUTTON 6
+#define EXIT_BUTTON 7
+
+// declare a static array to hold the pin numbers of pressed buttons
+static int pressedButtons[20];
+// declare a variable to keep track of the current index in the pressedButtons array
+static int currentIndex = 0;
+// declare a variable to prevent button bouncing
+unsigned long lastInterruptButtonTime = 0;
+// ISR function to read button states and store them in the pressedButtons array
+void buttonInterrupt() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastInterruptButtonTime < 100) {
+    return;
+  }
+  lastInterruptTime = currentTime;
+  // Add the pin number of the pressed button to the pressedButtons array
+  if (digitalRead(UP_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = UP_BUTTON;
+  }
+  else if (digitalRead(DOWN_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = DOWN_BUTTON;
+  }
+  else if (digitalRead(LEFT_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = LEFT_BUTTON;
+  }
+  else if (digitalRead(RIGHT_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = RIGHT_BUTTON;
+  }
+  else if (digitalRead(MOVE_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = MOVE_BUTTON;
+  }
+  else if (digitalRead(EXIT_BUTTON) == HIGH) {
+    pressedButtons[currentIndex] = EXIT_BUTTON;
+  }
+  // Increment the currentIndex variable and wrap around if necessary
+  currentIndex = (currentIndex + 1) % 20;
+}
+// __________________________________
+
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, 12, 11, 10, MAX_DEVICES);
 //MD_Parola parola = MD_Parola(HARDWARE_TYPE, 12, 11, 10, MAX_DEVICES);
 
@@ -91,7 +137,7 @@ public:
   void Draw(){
 
   }
-}
+};
 Menu menu;
 
 class SpaceInvaders{
@@ -319,6 +365,22 @@ void setState(State s){
 }
 
 void setup() {
+    // Set button pins as inputs
+  pinMode(UP_BUTTON, INPUT);
+  pinMode(DOWN_BUTTON, INPUT);
+  pinMode(LEFT_BUTTON, INPUT);
+  pinMode(RIGHT_BUTTON, INPUT);
+  pinMode(MOVE_BUTTON, INPUT);
+  pinMode(EXIT_BUTTON, INPUT);
+  
+  // Attach interrupts to buttons
+  attachInterrupt(digitalPinToInterrupt(UP_BUTTON), buttonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(DOWN_BUTTON), buttonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(LEFT_BUTTON), buttonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(RIGHT_BUTTON), buttonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(MOVE_BUTTON), buttonInterrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(EXIT_BUTTON), buttonInterrupt, RISING);
+
   im.sprite = new i8[8]{
     0b00000000,
     0b00011000,
