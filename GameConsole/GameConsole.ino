@@ -32,7 +32,7 @@ void buttonInterrupt() {
   if (currentTime - lastInterruptButtonTime < 100) {
     return;
   }
-  lastInterruptTime = currentTime;
+  lastInterruptButtonTime = currentTime;
   // Add the pin number of the pressed button to the pressedButtons array
   if (digitalRead(UP_BUTTON) == HIGH) {
     pressedButtons[currentIndex] = UP_BUTTON;
@@ -126,6 +126,9 @@ struct Pos{
     Pos():Pos(0,0){}
     i8 x;
     i8 y;
+    friend bool operator==(Pos& lhs, Pos& rhs){
+      return lhs.x==rhs.x&&lhs.y==rhs.y;
+    }
 };
 
 class Menu{
@@ -242,10 +245,12 @@ public:
 SpaceInvaders spaceInvaders;
 
 class SnakeGame{
-	class Snake{
+public:
+	struct Snake{
 		Pos moveDelta = Pos(1,0);
 		arx::vector<Pos> body;
 	};
+  Pos moveDelta;
 	ull score = 0;
 	Snake snake;
 	//arx::vector<Pos> apples;
@@ -305,7 +310,7 @@ class SnakeGame{
       }
     }
 		
-		const lastPos = snake.body.front();
+		const Pos lastPos = snake.body.front();
 		for(i8 i=0;i<snake.body.size()-1;i++){
 			if(snake.body.back()==snake.body[i]){
 				GameOver(false);
