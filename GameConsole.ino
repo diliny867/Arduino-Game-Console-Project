@@ -1,4 +1,5 @@
-#include <ArxContainer.h>
+
+        #include <ArxContainer.h>
 #include <MD_MAX72xx.h>
 //#include <MD_Parola.h>
 #include <SPI.h>
@@ -38,17 +39,28 @@ State state = MENU;
 void setState(State s); //for classes to know about this function
 
 /*
-/// 0-8 bytes - top left
-/// 8-16 bytes - top right
-/// 16-24 bytes - bottom left
-/// 24-32 bytes - bottom right
+/// 0-8 bytes - bottom right
+/// 8-16 bytes - bottom left
+/// 16-24 bytes - tor right
+/// 24-32 bytes - top left
 */
 i8 renderBuffer[32];
 void drawPixel(i8 x, i8 y, bool value){ //convoluted math
   i8 pos = (y/8)*16+y%8 + (x/8)*8;
-  renderBuffer[pos]|=value<<(x%8);
+
+  /*
+  i8 pos;
+  if(y<8){
+    pos = y%8+(x/8)*8;
+    renderBuffer[pos]|=value<<(7-x%8);
+  }else{
+    pos = 16+y%8+(x/8)*8;
+    renderBuffer[pos]|=value<<(x%8);
+  }*/
+  
   //renderBuffer[pos]&=~(i8(!value)<<(x%8));
 }
+
 void drawLine8(i8 x, i8 y, i8 line){ //convoluted math
   /*
   i8 pos = (y/8)*16+y%8 + (x/8)*8;
@@ -118,7 +130,7 @@ public:
     
   }
   void Draw(){
-
+    
   }
 };
 Menu menu;
@@ -322,6 +334,7 @@ ull lastMillis = 0;
 ull lastMillis2 = 0;
 
 void setState(State s){
+  if(s==MENU){return;}
   lastMillis = 0;
   lastMillis2 = 0;
   state = s;
@@ -390,13 +403,21 @@ void setup() {
   mx.begin();
   mx.clear(); // clear the display
   checkButtons();
+  
 }
 
 //i8 playerDX = 1;
 void loop() {
   clearRenderBuffer();
   checkButtons();
+
+/*
+  for(int i =0;i<8;i++){
+    renderBuffer[i+24]=255;
+  }
+  showOnScreen();
   
+  return;*/
   if(state != State::MENU){
     if(exitBttn.state == PRESS){
       Serial.println("exit");
