@@ -50,7 +50,7 @@ The Game Console is a compact computer game console designed to provide users wi
    - Button 5: MAIN MOVE - Primary action button
    - Button 6: EXIT MENU - Exit to the main menu
 3. Six resistors (1 kΩ ±1%)
-   ![resistor: brown, black, black, brown, brown](images/resistors-view.png)
+![resistor: brown, black, black, brown, brown](images/resistors-view.png)
 5. Arduino wires
 
 ---
