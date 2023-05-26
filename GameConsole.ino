@@ -38,8 +38,8 @@ State state = MENU;
 void setState(State s); //for classes to know about this function
 
 /*
-/// 0-8 bytes - top right
-/// 8-16 bytes - top left
+/// 0-8 bytes - top left
+/// 8-16 bytes - top right
 /// 16-24 bytes - bottom left
 /// 24-32 bytes - bottom right
 */
