@@ -1,3 +1,5 @@
+# Arduino game console
+
 **Contents**
 1. [Main Idea of the Project](#main-idea-of-the-project)
 2. [Code for Game Console](#code-for-game-console)
