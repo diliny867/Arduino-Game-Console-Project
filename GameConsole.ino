@@ -1,5 +1,4 @@
-
-        #include <ArxContainer.h>
+#include <ArxContainer.h>
 #include <MD_MAX72xx.h>
 //#include <MD_Parola.h>
 #include <SPI.h>
@@ -39,42 +38,64 @@ State state = MENU;
 void setState(State s); //for classes to know about this function
 
 /*
-/// 0-8 bytes - bottom right
-/// 8-16 bytes - bottom left
-/// 16-24 bytes - tor right
-/// 24-32 bytes - top left
+/// 0-8 bytes - top right
+/// 8-16 bytes - top left
+/// 16-24 bytes - bottom left
+/// 24-32 bytes - bottom right
 */
 i8 renderBuffer[32];
-void drawPixel(i8 x, i8 y, bool value){ //convoluted math
-  i8 pos = (y/8)*16+y%8 + (x/8)*8;
-
-  /*
+void drawPixel(i8 x, i8 y){
+  //i8 pos = (y/8)*16+y%8 + (x/8)*8;
+  
   i8 pos;
   if(y<8){
-    pos = y%8+(x/8)*8;
-    renderBuffer[pos]|=value<<(7-x%8);
+    pos = 7-y+(x/8)*8;
+    renderBuffer[pos]|=1<<(7-x%8);
   }else{
     pos = 16+y%8+(x/8)*8;
-    renderBuffer[pos]|=value<<(x%8);
-  }*/
+    renderBuffer[pos]|=1<<(x%8);
+  }
   
+  //renderBuffer[pos]|=value<<(x%8);
   //renderBuffer[pos]&=~(i8(!value)<<(x%8));
 }
 
-void drawLine8(i8 x, i8 y, i8 line){ //convoluted math
-  /*
-  i8 pos = (y/8)*16+y%8 + (x/8)*8;
-  //Serial.println(String(pos));
-  if(x<8||x>=16&&x<24){
-    renderBuffer[pos]|=(line<<(8-x%8));
-  }else if(x>=8&&x<16||x>=24){
-    renderBuffer[pos]|=(line>>(x%8));
-  }
-  */
-  i8 pos = (y/8)*16+y%8 + (x/8)*8;
-  renderBuffer[pos]|=(line<<(x%8));
-  if(x%16<8){
-    renderBuffer[pos+8]|=(line>>(8-(x%8)));
+void drawLine8(i8 x, i8 y, i8 line){
+  i8 pos;
+  if(y<8){
+    if(x<8){
+      pos = 7-y%8;
+      if(x<0){
+        renderBuffer[pos]|=(line<<(-x));
+      }else{
+        renderBuffer[pos]|=(line>>x)&~(255<<(8-x%8));
+        renderBuffer[pos+8]|=(line<<(8-x));
+      }
+    }else{
+      pos = 15-y%8;
+      if(x>=16){
+        return;
+      }else{
+        renderBuffer[pos]|=(line>>x%8)&~(255<<(8-x%8));
+      }
+    }
+  }else{
+    if(x<8){
+      pos = 16+y%8;
+      if(x<0){
+        renderBuffer[pos]|=(line>>(-x))&~(255<<((8+x)%8));
+      }else{
+        renderBuffer[pos]|=(line<<x);
+        renderBuffer[pos+8]|=(line>>(8-x))&~(255<<(x%8));
+      }
+    }else{
+      pos = 24+y%8;
+      if(x>=16){
+        return;
+      }else{
+        renderBuffer[pos]|=(line<<x%8);
+      }
+    }
   }
 }
 i8 getPixel(i8 x, i8 y){ //convoluted math
@@ -86,11 +107,10 @@ void clearRenderBuffer(){
 }
 void showOnScreen(){
   mx.setBuffer(7, 8, (ui8*)renderBuffer);
-  mx.setBuffer(15, 8, (ui8*)renderBuffer+8);
-  mx.setBuffer(23, 8, (ui8*)renderBuffer+16);
-  mx.setBuffer(31, 8, (ui8*)renderBuffer+24);
+  mx.setBuffer(15, 8, (ui8*)(renderBuffer+8));
+  mx.setBuffer(23, 8, (ui8*)(renderBuffer+16));
+  mx.setBuffer(31, 8, (ui8*)(renderBuffer+24));
 }
-
 
 class Img{
 public:
@@ -101,10 +121,18 @@ public:
   i8* sprite;
   void Draw(){
     for(i8 i=0; i<8; i++){
-      if(y+i >= 32){
-        break;
+      if(y+i>=16 || y+i<0){
+        continue;
       }
-        drawLine8(x,y+i,sprite[i]);
+      drawLine8(x,y+i,sprite[i]);
+    }
+  }
+  void DrawInverted(){
+    for(i8 i=0; i<8; i++){
+      if(y+i>=16 || y+i<0){
+        continue;
+      }
+      drawLine8(x,y+i,~sprite[i]);
     }
   }
 };
@@ -126,47 +154,114 @@ struct Pos{
 class Menu{
 public:
   //Menu Code Here
+  i8 selection = 0;
+  Img SI_LOGO;
+  Img SNAKE_LOGO;
+  Img ARROW;
+  Img ARROW2;
   void Init(){
-    
+    SI_LOGO.sprite = new i8[8]{
+    0b01000010,
+    0b00100100,
+    0b01111110,
+    0b11011011,
+    0b11111111,
+    0b11111111,
+    0b01000010,
+    0b00100100,
+  };
+  SI_LOGO.x=0;
+  SI_LOGO.y=0;
+  SNAKE_LOGO.sprite = new i8[8]{
+    0b00000010,
+    0b01111110,
+    0b01000000,
+    0b01111111,
+    0b00000001,
+    0b11111111,
+    0b11100000,
+    0b10100000
+  };
+  SNAKE_LOGO.x=8;
+  SNAKE_LOGO.y=0;
+  ARROW.sprite = new i8[8]{
+    0b00000000,
+    0b00011000,
+    0b00111100,
+    0b01111110,
+    0b01011010,
+    0b00011000,
+    0b00011000,
+    0b00000000,
+  };
+  ARROW.x=0;
+  ARROW.y=8;
+  }
+  void Select(){
+    if(selection == 0){
+      setState(SPACEINVADERS);
+    }
+    if(selection == 1){
+      setState(SNAKE);
+    }
   }
   void Draw(){
-    
+    if(selection == 0){
+      SI_LOGO.DrawInverted();
+      SNAKE_LOGO.Draw();
+      ARROW.x=0;
+      drawPixel(1,9);
+      drawPixel(6,9);
+      drawPixel(1,14);
+      drawPixel(6,14);
+    }
+    if (selection == 1){
+      SI_LOGO.Draw();
+      SNAKE_LOGO.DrawInverted();
+      ARROW.x=8;
+      drawPixel(9,9);
+      drawPixel(14,9);
+      drawPixel(9,14);
+      drawPixel(14,14);
+    }
+    //ARROW.Draw();
   }
 };
 Menu menu;
 
 class SpaceInvaders{
 public:
-  Pos playerPos = Pos(7,1);
+  Pos playerPos = Pos(7,14);
   arx::vector<Pos> bullets;
   arx::vector<Pos> enemies;
   i8 enemyY = 0;
   i8 enemyDX = 1;
   ull tickTime = 0;
   void Init(){
-    playerPos = Pos(7,1);
+    playerPos = Pos(7,14);
     enemyY = 0;
     enemyDX = 1;
     tickTime = 0;
+    bullets.clear();
     enemies.clear();
-    enemies.push_back(Pos(5,15));
-    enemies.push_back(Pos(7,15));
-    enemies.push_back(Pos(9,15));
-    enemies.push_back(Pos(11,15));
-    enemies.push_back(Pos(6,14));
-    enemies.push_back(Pos(8,14));
-    enemies.push_back(Pos(10,14));
-    enemies.push_back(Pos(12,14));
-    enemies.push_back(Pos(5,13));
-    enemies.push_back(Pos(7,13));
-    enemies.push_back(Pos(9,13));
-    enemies.push_back(Pos(11,13));
+    enemies.push_back(Pos(5,0));
+    enemies.push_back(Pos(7,0));
+    enemies.push_back(Pos(9,0));
+    enemies.push_back(Pos(11,0));
+    enemies.push_back(Pos(6,1));
+    enemies.push_back(Pos(8,1));
+    enemies.push_back(Pos(10,1));
+    enemies.push_back(Pos(12,1));
+    enemies.push_back(Pos(5,2));
+    enemies.push_back(Pos(7,2));
+    enemies.push_back(Pos(9,2));
+    enemies.push_back(Pos(11,2));
   }
   void GameOver(bool win){
     if(win){
-
+      Serial.println("SPACE INVADERS WIN");
     }else{
-
+      Serial.println("SPACE INVADERS LOSE");
     }
     setState(State::MENU);
   }
@@ -176,12 +271,12 @@ public:
     }
   }
   void Draw(){
-    drawPixel(playerPos.x,playerPos.y,1);
+    drawPixel(playerPos.x,playerPos.y);
     for(auto& bullet: bullets){
-      drawPixel(bullet.x,bullet.y,1);
+      drawPixel(bullet.x,bullet.y);
     }
     for(auto& enemy: enemies){
-      drawPixel(enemy.x,enemy.y,1);
+      drawPixel(enemy.x,enemy.y);
     }
   }
   void Tick(){
@@ -190,8 +285,8 @@ public:
       return;
     }
     for(auto it = bullets.begin();it<bullets.end();){
-      it->y+=1;
-      if(it->y>=16){
+      it->y-=1;
+      if(it->y<0){
         it = bullets.erase(it);
       }else{
         ++it;
@@ -229,7 +324,7 @@ public:
         return;
       }
       for(auto& enemy: enemies){
-        enemy.y-=1;
+        enemy.y+=1;
       }
       enemyY++;
     }
@@ -255,11 +350,12 @@ public:
 		snake.body.clear();
 		snake.body.push_back(Pos(3,4));
     snake.body.push_back(Pos(2,4));
+    snake.body.push_back(Pos(1,4));
     SpawnApple();
 	}
 	void SpawnApple(){
     bool goodSpawn;
-    do{ //bad code, but i kinda dont care
+    do{
       goodSpawn = true;
       apple = Pos(random(16),random(16));
       for(auto& snakePart: snake.body){
@@ -272,49 +368,51 @@ public:
 	}
 	void GameOver(bool win){
     if(win){
-
+      Serial.println("SNAKE WIN");
     }else{
-      
+      Serial.println("SNAKE LOSE");
     }
     setState(State::MENU);
 	}
 	void Tick(){
+    for(i8 i=1;i<snake.body.size();i++){
+      if(snake.body[i] == snake.body.front()){
+        GameOver(false);
+      }
+    }
     if(snake.body.size()==256){
       GameOver(true);
       return;
     }
+    
     if(dieOnWall){
-      if(snake.body.back().x>15 || snake.body.back().x<0 || snake.body.back().y>15 || snake.body.back().y<0){
+      if(snake.body.front().x>15 || snake.body.front().x<0 || snake.body.front().y>15 || snake.body.front().y<0){
 		  	GameOver(false);
         return;
 		  }
     }else{
-      if(snake.body.back().x>15){
-        snake.body.back().x=0;
+      if(snake.body.front().x>15){
+        snake.body.front().x=0;
       }
-      if(snake.body.back().x<0){
-        snake.body.back().x=15;
+      if(snake.body.front().x<0){
+        snake.body.front().x=15;
       }
-      if(snake.body.back().y>15){
-        snake.body.back().y=0;
+      if(snake.body.front().y>15){
+        snake.body.front().y=0;
       }
-      if(snake.body.back().y<0){
-        snake.body.back().y=15;
+      if(snake.body.front().y<0){
+        snake.body.front().y=15;
       }
     }
-		
-		const Pos lastPos = snake.body.front();
-		for(i8 i=0;i<snake.body.size()-1;i++){
-			if(snake.body.back()==snake.body[i]){
-				GameOver(false);
-        return;
-			}
-			snake.body[i]=snake.body[i+1];
+    
+		const Pos lastPos = snake.body.back();
+		for(i8 i=snake.body.size()-1;i>0;i--){
+			snake.body[i]=snake.body[i-1];
 		}
-		snake.body.back().x+=snake.moveDelta.x;
-		snake.body.back().y+=snake.moveDelta.y;
-
-    if(snake.body.back() == apple){
+		snake.body.front().x+=snake.moveDelta.x;
+		snake.body.front().y+=snake.moveDelta.y;
+    
+    if(snake.body.front() == apple){
       snake.body.push_back(lastPos);
       score++;
       SpawnApple();
@@ -322,9 +420,9 @@ public:
 	}
 	void Draw(){
 		for(auto& snakePart: snake.body){
-			drawPixel(snakePart.x,snakePart.y,1);
+			drawPixel(snakePart.x,snakePart.y);
 		}
-    drawPixel(apple.x,apple.y,1);
+    drawPixel(apple.x,apple.y);
 	}
 };
 SnakeGame snakeGame;
@@ -334,7 +432,6 @@ ull lastMillis = 0;
 ull lastMillis2 = 0;
 
 void setState(State s){
-  if(s==MENU){return;}
   lastMillis = 0;
   lastMillis2 = 0;
   state = s;
@@ -398,7 +495,9 @@ void setup() {
     0b01000010,
     0b10000001
   };
-  setState(State::SPACEINVADERS);
+  im.x=-8;
+  im.y = 4;
+  setState(State::MENU);
   Serial.begin(9600);
   mx.begin();
   mx.clear(); // clear the display
@@ -406,18 +505,10 @@ void setup() {
   
 }
 
-//i8 playerDX = 1;
 void loop() {
   clearRenderBuffer();
   checkButtons();
-
-/*
-  for(int i =0;i<8;i++){
-    renderBuffer[i+24]=255;
-  }
-  showOnScreen();
   
-  return;*/
   if(state != State::MENU){
     if(exitBttn.state == PRESS){
       Serial.println("exit");
@@ -427,30 +518,41 @@ void loop() {
   switch(state){
 ////////////////////////////////////////////////////////////////////
     case(State::MENU):
+      if(millis()-lastMillis>=100){
+        if(leftBttn.state == PRESS){
+          menu.selection--;
+          if(menu.selection<0){
+            menu.selection=0;
+          }
+        }
+        if(rightBttn.state == PRESS){
+          menu.selection++;
+          if(menu.selection>1){
+            menu.selection=1;
+          }
+        }
+      }
+      if(actionBttn.state == PRESS){
+        menu.Select();
+      }
+      menu.Draw();
+      /*
       if(millis()-lastMillis >= 500){
         im.x++;
-        if(im.x>=16){
-          im.x=0;
+        if(SI_LOGO.x>=16){
+          im.x=-8;
         }
         lastMillis = millis();
       }
       im.Draw();
+      */
       break;
 ////////////////////////////////////////////////////////////////////
     case(State::SPACEINVADERS):
       if(millis()-lastMillis >= 500){
         spaceInvaders.Tick();
-        /*
-        spaceInvaders.playerPos.x+=playerDX;
-        if(spaceInvaders.playerPos.x == 12 || spaceInvaders.playerPos.x == 4){
-          playerDX*=-1;
-        }*/
         lastMillis = millis();
       }
-      //if(millis()-lastMillis2 >= 1100){
-      //  spaceInvaders.Shoot();
-      //  lastMillis2 = millis();
-      //}
       if(leftBttn.state == PRESS){
         Serial.println("left");
         if(spaceInvaders.playerPos.x>0){
@@ -480,14 +582,14 @@ void loop() {
       }
       if(upBttn.state == PRESS){
         Serial.println("up");
-        if(snakeGame.snake.moveDelta!=Pos(0,-1)){
-          snakeGame.snake.moveDelta = Pos(0,1);
+        if(snakeGame.snake.moveDelta!=Pos(0,1)){
+          snakeGame.snake.moveDelta = Pos(0,-1);
         }
       }
       if(downBttn.state == PRESS){
         Serial.println("down");
-        if(snakeGame.snake.moveDelta!=Pos(0,1)){
-          snakeGame.snake.moveDelta = Pos(0,-1);
+        if(snakeGame.snake.moveDelta!=Pos(0,-1)){
+          snakeGame.snake.moveDelta = Pos(0,1);
         }
       }
       if(leftBttn.state == PRESS){
