@@ -1,10 +1,9 @@
-# Arduino game console
-
 **Contents**
 1. [Main Idea of the Project](#main-idea-of-the-project)
 2. [Code for Game Console](#code-for-game-console)
-3. [Scheme and Drawing](#scheme-and-drawing)
-4. [Game Console Instruction](#game-console-instruction)
+3. [Scheme](#scheme)
+4. [Drawing](#drawing)
+5. [Game Console Instruction](#game-console-instruction)
    - [Introduction](#introduction)
    - [Components](#components)
    - [Game Selection and Navigation](#game-selection-and-navigation)
@@ -13,7 +12,7 @@
    - [Space Invaders](#space-invaders)
    - [Snake](#snake)
    - [Powering Off](#powering-off)
-5. [Test Results](#test-results)
+6. [Test Results](#test-results)
 ---
 
 ## Main Idea of the Project
