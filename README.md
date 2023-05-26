@@ -52,6 +52,7 @@ The Game Console is a compact computer game console designed to provide users wi
 3. Six resistors (1 kΩ ±1%)
 
 ![resistor: brown, black, black, brown, brown](images/resistors-view.png)
+
 5. Arduino wires
 
 ---
