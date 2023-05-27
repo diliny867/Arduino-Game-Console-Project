@@ -1,3 +1,4 @@
+//Include necessary libraries
 #include <ArxContainer.h>
 #include <MD_MAX72xx.h>
 //#include <MD_Parola.h>
@@ -5,7 +6,7 @@
 
 typedef uint8_t ui8;
 typedef int8_t i8;
-typedef unsigned long long ull; // uint 32
+typedef unsigned long long ull; // in arduino uint 32
 
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 //#define HARDWARE_TYPE MD_MAX72XX::GENERIC_HW
@@ -43,8 +44,8 @@ void setState(State s); //for classes to know about this function
 /// 16-24 bytes - bottom left
 /// 24-32 bytes - bottom right
 */
-i8 renderBuffer[32];
-void drawPixel(i8 x, i8 y){
+i8 renderBuffer[32]; //buffer that gets pushed to matrices
+void drawPixel(i8 x, i8 y){ //add pixel to the buffer
   //i8 pos = (y/8)*16+y%8 + (x/8)*8;
   
   i8 pos;
@@ -60,18 +61,18 @@ void drawPixel(i8 x, i8 y){
   //renderBuffer[pos]&=~(i8(!value)<<(x%8));
 }
 
-void drawLine8(i8 x, i8 y, i8 line){
+void drawLine8(i8 x, i8 y, i8 line){ //add an entire line to the buffer
   i8 pos;
   if(y<8){
-    if(x<8){
+    if(x<8){ //top left matrix
       pos = 7-y%8;
       if(x<0){
         renderBuffer[pos]|=(line<<(-x));
       }else{
-        renderBuffer[pos]|=(line>>x)&~(255<<(8-x%8));
+        renderBuffer[pos]|=(line>>x)&~(255<<(8-x%8)); //sometimes you draw line on both matrices
         renderBuffer[pos+8]|=(line<<(8-x));
       }
-    }else{
+    }else{ //top right matrix
       pos = 15-y%8;
       if(x>=16){
         return;
@@ -80,15 +81,15 @@ void drawLine8(i8 x, i8 y, i8 line){
       }
     }
   }else{
-    if(x<8){
+    if(x<8){ //bottom left matrix
       pos = 16+y%8;
       if(x<0){
         renderBuffer[pos]|=(line>>(-x))&~(255<<((8+x)%8));
       }else{
-        renderBuffer[pos]|=(line<<x);
+        renderBuffer[pos]|=(line<<x); //sometimes you draw line on both matrices
         renderBuffer[pos+8]|=(line>>(8-x))&~(255<<(x%8));
       }
-    }else{
+    }else{ //botom right matrix
       pos = 24+y%8;
       if(x>=16){
         return;
@@ -98,28 +99,28 @@ void drawLine8(i8 x, i8 y, i8 line){
     }
   }
 }
-i8 getPixel(i8 x, i8 y){ //convoluted math
+i8 getPixel(i8 x, i8 y){ //get pixel from buffer
   i8 pos = (y/8)*16+y%8 + (x/8)*8;
   return (renderBuffer[pos]>>(x%8))&1;
 }
 void clearRenderBuffer(){
   memset(renderBuffer, 0, sizeof(renderBuffer));
 }
-void showOnScreen(){
+void showOnScreen(){ //push data from buffer to matrices
   mx.setBuffer(7, 8, (ui8*)renderBuffer);
   mx.setBuffer(15, 8, (ui8*)(renderBuffer+8));
   mx.setBuffer(23, 8, (ui8*)(renderBuffer+16));
   mx.setBuffer(31, 8, (ui8*)(renderBuffer+24));
 }
 
-class Img{
+class Img{ //class to store 8x8 picture
 public:
   Img(i8 x0, i8 y0):x(x0),y(y0){}
   Img():Img(0,0){}
   i8 x;
   i8 y;
-  i8* sprite;
-  void Draw(){
+  i8* sprite; //actual picture data
+  void Draw(){ //draw to buffer
     for(i8 i=0; i<8; i++){
       if(y+i>=16 || y+i<0){
         continue;
@@ -127,7 +128,7 @@ public:
       drawLine8(x,y+i,sprite[i]);
     }
   }
-  void DrawInverted(){
+  void DrawInverted(){ //draw inverted to buffer
     for(i8 i=0; i<8; i++){
       if(y+i>=16 || y+i<0){
         continue;
@@ -138,7 +139,7 @@ public:
 };
 Img im;
 
-struct Pos{
+struct Pos{ //helper struct
     Pos(i8 x_, i8 y_):x(x_),y(y_){}
     Pos():Pos(0,0){}
     i8 x;
@@ -151,7 +152,7 @@ struct Pos{
     }
 };
 
-class Menu{
+class Menu{ //class that manages the menu, that is drawn at the startup of console
 public:
   //Menu Code Here
   i8 selection = 0;
@@ -160,7 +161,7 @@ public:
   Img ARROW;
   Img ARROW2;
   void Init(){
-    SI_LOGO.sprite = new i8[8]{
+    SI_LOGO.sprite = new i8[8]{ //snake logo
     0b01000010,
     0b00100100,
     0b01111110,
@@ -172,7 +173,7 @@ public:
   };
   SI_LOGO.x=0;
   SI_LOGO.y=0;
-  SNAKE_LOGO.sprite = new i8[8]{
+  SNAKE_LOGO.sprite = new i8[8]{ //space invaders logo
     0b00000010,
     0b01111110,
     0b01000000,
@@ -197,7 +198,7 @@ public:
   ARROW.x=0;
   ARROW.y=8;
   }
-  void Select(){
+  void Select(){ //select game
     if(selection == 0){
       setState(SPACEINVADERS);
     }
@@ -205,7 +206,7 @@ public:
       setState(SNAKE);
     }
   }
-  void Draw(){
+  void Draw(){ //draws menu
     if(selection == 0){
       SI_LOGO.DrawInverted();
       SNAKE_LOGO.Draw();
@@ -224,12 +225,12 @@ public:
       drawPixel(9,14);
       drawPixel(14,14);
     }
-    //ARROW.Draw();
+    //ARROW.Draw(); //we do not draw this, because of the issue(no contact we guess) in the electronics, we can draw maximum 4 points on bottom left, when bottom right was drawn
   }
 };
 Menu menu;
 
-class SpaceInvaders{
+class SpaceInvaders{ // the consoles first game class
 public:
   Pos playerPos = Pos(7,14);
   arx::vector<Pos> bullets;
@@ -238,13 +239,13 @@ public:
   i8 enemyDX = 1;
   ull tickTime = 0;
   void Init(){
-    playerPos = Pos(7,14);
+    playerPos = Pos(7,14); //init player
     enemyY = 0;
     enemyDX = 1;
     tickTime = 0;
     bullets.clear();
     enemies.clear();
-    enemies.push_back(Pos(5,0));
+    enemies.push_back(Pos(5,0)); //init enemies
     enemies.push_back(Pos(7,0));
     enemies.push_back(Pos(9,0));
     enemies.push_back(Pos(11,0));
@@ -279,12 +280,12 @@ public:
       drawPixel(enemy.x,enemy.y);
     }
   }
-  void Tick(){
+  void Tick(){ //game logic
     if(enemies.empty()){
       GameOver(true);
       return;
     }
-    for(auto it = bullets.begin();it<bullets.end();){
+    for(auto it = bullets.begin();it<bullets.end();){ //move bullets
       it->y-=1;
       if(it->y<0){
         it = bullets.erase(it);
@@ -301,9 +302,8 @@ public:
       enemyWasDeleted = false;
       it->x+=enemyDX;
       for(auto it2 = bullets.begin();it2<bullets.end();){
-        if(it->x == it2->x && it->y == it2->y){
+        if(it->x == it2->x && it->y == it2->y){ //if bullet hit enemy, remove it
           enemyWasDeleted = true;
-          //bulletWasDeleted = true;
           it = enemies.erase(it);
           it2 = bullets.erase(it2);
           break;
@@ -315,15 +315,15 @@ public:
         ++it;
       }
     }
-    if(tickTime%4==0){
+    if(tickTime%4==0){ //every 4 game ticks
       enemyDX*=-1;
     }
-    if(tickTime%8==0 && tickTime!=0){
-      if(enemyY>=12){
+    if(tickTime%8==0 && tickTime!=0){ //every 8 game ticks
+      if(enemyY>=12){ //enemies got to player
         GameOver(false);
         return;
       }
-      for(auto& enemy: enemies){
+      for(auto& enemy: enemies){ //move enemies down
         enemy.y+=1;
       }
       enemyY++;
@@ -333,7 +333,7 @@ public:
 };
 SpaceInvaders spaceInvaders;
 
-class SnakeGame{
+class SnakeGame{ //the legendary snake game
 public:
 	struct Snake{
 		Pos moveDelta = Pos(1,0);
@@ -343,17 +343,17 @@ public:
 	ull score = 0;
 	Snake snake;
   Pos apple;
-  bool dieOnWall = false;
+  bool dieOnWall = false; //if we want snake to die or teleport on walls hit
 	void Init(){
 		score = 0;
 		moveDelta = Pos(1,0);
 		snake.body.clear();
-		snake.body.push_back(Pos(3,4));
+		snake.body.push_back(Pos(3,4)); //init snake
     snake.body.push_back(Pos(2,4));
     snake.body.push_back(Pos(1,4));
     SpawnApple();
 	}
-	void SpawnApple(){
+	void SpawnApple(){ //creates new apple on board
     bool goodSpawn;
     do{
       goodSpawn = true;
@@ -412,7 +412,7 @@ public:
 		snake.body.front().x+=snake.moveDelta.x;
 		snake.body.front().y+=snake.moveDelta.y;
     
-    if(snake.body.front() == apple){
+    if(snake.body.front() == apple){ //if ate apple
       snake.body.push_back(lastPos);
       score++;
       SpawnApple();
@@ -428,10 +428,10 @@ public:
 SnakeGame snakeGame;
 
 
-ull lastMillis = 0;
+ull lastMillis = 0; //helper delay variables
 ull lastMillis2 = 0;
 
-void setState(State s){
+void setState(State s){ //change current console state
   lastMillis = 0;
   lastMillis2 = 0;
   state = s;
@@ -449,7 +449,7 @@ void setState(State s){
   }
 }
 
-class Button{
+class Button{ //class to manage buttons
 public:
   unsigned long long lastChangeTime = 0;
   int pin;
@@ -458,7 +458,7 @@ public:
     pinMode(pin, INPUT);
   }
   void CheckState(){
-    if(millis()-lastChangeTime > 10){
+    if(millis()-lastChangeTime > 10){ //do nothing if state changes too rapidly
       if(digitalRead(pin) == HIGH){
         state = PRESS;
       }
@@ -475,7 +475,7 @@ Button leftBttn(LEFT_BUTTON);
 Button rightBttn(RIGHT_BUTTON);
 Button actionBttn(ACTION_BUTTON);
 Button exitBttn(EXIT_BUTTON);
-void checkButtons(){
+void checkButtons(){ //check all buttons states
   upBttn.CheckState();
   downBttn.CheckState();
   leftBttn.CheckState();
@@ -485,6 +485,7 @@ void checkButtons(){
 }
 
 void setup() {
+  /*
   im.sprite = new i8[8]{
     0b00000000,
     0b00011000,
@@ -496,7 +497,7 @@ void setup() {
     0b10000001
   };
   im.x=-8;
-  im.y = 4;
+  im.y = 4;*/
   setState(State::MENU);
   Serial.begin(9600);
   mx.begin();
@@ -509,16 +510,16 @@ void loop() {
   clearRenderBuffer();
   checkButtons();
   
-  if(state != State::MENU){
+  if(state != State::MENU){ // do nothing if pressing exit button when the state is menu
     if(exitBttn.state == PRESS){
       Serial.println("exit");
       setState(State::MENU);
     }
   }
-  switch(state){
+  switch(state){ //check current state and do according stuff
 ////////////////////////////////////////////////////////////////////
     case(State::MENU):
-      if(millis()-lastMillis>=100){
+      if(millis()-lastMillis>=100){//button press delay
         if(leftBttn.state == PRESS){
           menu.selection--;
           if(menu.selection<0){
@@ -549,23 +550,23 @@ void loop() {
       break;
 ////////////////////////////////////////////////////////////////////
     case(State::SPACEINVADERS):
-      if(millis()-lastMillis >= 500){
+      if(millis()-lastMillis >= 500){ //game tick time delay
         spaceInvaders.Tick();
         lastMillis = millis();
       }
-      if(leftBttn.state == PRESS){
+      if(leftBttn.state == PRESS){ //move right
         Serial.println("left");
         if(spaceInvaders.playerPos.x>0){
           spaceInvaders.playerPos.x--;
         }
       }
-      if(rightBttn.state == PRESS){
+      if(rightBttn.state == PRESS){ //move left
         Serial.println("right");
         if(spaceInvaders.playerPos.x<15){
           spaceInvaders.playerPos.x++;
         }
       }
-      if(actionBttn.state == PRESS){
+      if(actionBttn.state == PRESS){ //shoot
         Serial.println("action");
         spaceInvaders.Shoot();
       }
@@ -573,32 +574,29 @@ void loop() {
     break;
 ////////////////////////////////////////////////////////////////////
 	  case(State::SNAKE):
-	  	if(millis()-lastMillis >= 500){
+	  	if(millis()-lastMillis >= 500){ //snake game tick delay
 	  		snakeGame.Tick();
 	  		lastMillis = millis();
 	  	}
-	  	if(millis()-lastMillis2 >= 1100){
-        lastMillis2 = millis();
-      }
-      if(upBttn.state == PRESS){
+      if(upBttn.state == PRESS){ //change snake move direction
         Serial.println("up");
         if(snakeGame.snake.moveDelta!=Pos(0,1)){
           snakeGame.snake.moveDelta = Pos(0,-1);
         }
       }
-      if(downBttn.state == PRESS){
+      if(downBttn.state == PRESS){ //change snake move direction
         Serial.println("down");
         if(snakeGame.snake.moveDelta!=Pos(0,-1)){
           snakeGame.snake.moveDelta = Pos(0,1);
         }
       }
-      if(leftBttn.state == PRESS){
+      if(leftBttn.state == PRESS){ //change snake move direction
         Serial.println("left");
         if(snakeGame.snake.moveDelta!=Pos(1,0)){
           snakeGame.snake.moveDelta = Pos(-1,0);
         }
       }
-      if(rightBttn.state == PRESS){
+      if(rightBttn.state == PRESS){ //change snake move direction
         Serial.println("right");
         if(snakeGame.snake.moveDelta!=Pos(-1,0)){
           snakeGame.snake.moveDelta = Pos(1,0);
