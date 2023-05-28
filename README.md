@@ -1,27 +1,34 @@
+# Arduino game console
+
+---
 **Contents**
 1. [Main Idea of the Project](#main-idea-of-the-project)
 2. [Code for Game Console](#code-for-game-console)
-3. [Scheme](#scheme)
-4. [Drawing](#drawing)
+3. [Scheme and Drawing](#scheme-and-drawing)
 5. [Game Console Instruction](#game-console-instruction)
    - [Introduction](#introduction)
    - [Components](#components)
    - [Game Selection and Navigation](#game-selection-and-navigation)
-   - [Powering On](#powering-on)
-   - [Main Menu](#main-menu)
-   - [Space Invaders](#space-invaders)
-   - [Snake](#snake)
-   - [Powering Off](#powering-off)
+      - [Powering On](#powering-on)
+      - [Main Menu](#main-menu)
+      - [Space Invaders](#space-invaders)
+      - [Snake](#snake)
+      - [Powering Off](#powering-off)
 6. [Test Results](#test-results)
+
 ---
 
 ## Main Idea of the Project
 
 We had an idea for a project that involves creating a compact computer game console using an LED matrix. The goal is to provide entertainment by allowing users to play old-school games on a small LED screen. The console consists of four MAX7219 8x8 matrices and six buttons for game control.
 
+---
+
 ## Code for Game Console
 
-You can find the Arduino code for the game console on our [GitHub repository]([https://github.com/your-repository](https://github.com/diliny867/Arduino-Game-Console-Project/blob/main/GameConsole.ino)).
+You can find the Arduino code for the game console on our [GitHub repository](https://github.com/diliny867/Arduino-Game-Console-Project/blob/main/GameConsole.ino).
+
+---
 
 ## Scheme and Drawing
 
@@ -32,6 +39,8 @@ You can find the Arduino code for the game console on our [GitHub repository]([h
 **Drawing of MAX7219:**
 
 ![Drawing](images/MAX7219.png)
+
+---
 
 ## Game Console Instruction
 
@@ -54,8 +63,6 @@ The Game Console is a compact computer game console designed to provide users wi
 ![resistor: brown, black, black, brown, brown](images/resistors-view.png)
 
 5. Arduino wires
-
----
 
 ### Game Selection and Navigation
 
@@ -106,7 +113,4 @@ Our game console was tested by EV and TM. During tests, we found out that there 
    - It probably happens because some wires don't make good contact as needed.
 
 3. There are unnecessary buttons that are inactive during particular windows or games, confusing the user about their purpose.
-
-Please note that these issues were identified during testing, and further improvements are required.
-
 ---
